@@ -33,7 +33,7 @@ class AuthController extends Controller
         $token = $this->iAuthService->login($request->all());
         return $token
             ? response()->json(['token' => $token])
-            : response()->json(['message', 'Invalid Credentials']);
+            : response()->json(['message' => 'Invalid Credentials']);
     }
 
     public function logout()
