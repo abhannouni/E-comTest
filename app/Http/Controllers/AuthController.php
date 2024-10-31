@@ -4,17 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
-use App\Models\User;
-use App\Services\Implementations\AuthService;
 use App\Services\Specifications\IAuthService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
     private IAuthService $iAuthService;
 
-    public function __construct(protected AuthService $authService)
+    public function __construct(protected IAuthService $authService)
     {
         $this->iAuthService = $authService;
     }

@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Repositories\Specifications\IOrderRepository;
 use App\Services\Specifications\IOrderService;
 use Exception;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class OrderService implements IOrderService
@@ -19,34 +20,34 @@ class OrderService implements IOrderService
 
     public function order(array $data)
     {
-        try {
-            $data['user_id'] = auth()->user()->id;
-            $order = $this->iOrderRepository->store($data);
-            
+        return DB::transaction(function () use ($data) {
+            try {
+                $data['user_id'] = auth()->user()->id;
+                $order = $this->iOrderRepository->store($data);
 
-            $totalPrice = 0;
+                $totalPrice = 0;
 
-            foreach ($data['products'] as $productData) {
-                $product = Product::findOrFail($productData['id']);
+                foreach ($data['products'] as $productData) {
+                    $product = Product::findOrFail($productData['id']);
 
-                $priceAtPurchase = $product->price;
-                $quantity = $productData['quantity'];
-                $totalPrice += $priceAtPurchase * $quantity;
+                    $priceAtPurchase = $product->price;
+                    $quantity = $productData['quantity'];
+                    $totalPrice += $priceAtPurchase * $quantity;
 
-                $order->products()->attach($product->id, [
-                    'quantity' => $quantity,
-                    'price_at_purchase' => $priceAtPurchase,
-                ]);
+                    $order->products()->attach($product->id, [
+                        'quantity' => $quantity,
+                        'price_at_purchase' => $priceAtPurchase,
+                    ]);
 
-                $product->decrement('stock_quantity', $quantity);
+                    $product->decrement('stock_quantity', $quantity);
+                }
+
+                $order->update(['total_price' => $totalPrice]);
+                return $order;
+            } catch (Exception $e) {
+                Log::error('An error occurred while ordering: ' . $e->getMessage());
+                abort(500, 'Failed to process the order.');
             }
-
-
-            $order->update(['total_price' => $totalPrice]);
-            return $order;
-        } catch (Exception $e) {
-            Log::error('an error occured while ordering: ' . $e->getMessage());
-            abort(500, $e->getMessage());
-        }
+        });
     }
 }
